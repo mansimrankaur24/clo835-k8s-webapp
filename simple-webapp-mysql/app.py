@@ -1,5 +1,4 @@
-from flask import Flask
-from flask import render_template
+from flask import Flask, render_template, request, redirect, url_for
 import socket
 import mysql.connector
 import os
@@ -20,30 +19,46 @@ if os.path.exists('/clo835/config/image_url'):
 else: 
     json_data = {}
 
-try:
-    mysql.connector.connect(host=DB_Host, database=DB_Database, user=DB_User, password=DB_Password)
-    image_url = json_data["success_url"] if json_data else "Not Available"
-except:
-    image_url = json_data["failed_url"] if json_data else "Not Available"
-
-#download the s3 image locally using aws cli command
-cmd = "aws s3 cp " + image_url + " static/img/image.jpg"
-process = subprocess.Popen(cmd, shell=True, stdout = subprocess.PIPE)
-print("Background image url from S3: ", image_url)
+print("Background image urls from S3: ", json_data)
 
 @app.route("/")
 def main():
     db_connect_result = False
     err_message = ""
     try:
-        mysql.connector.connect(host=DB_Host, database=DB_Database, user=DB_User, password=DB_Password)
+        conn = mysql.connector.connect(host=DB_Host, database=DB_Database, user=DB_User, password=DB_Password)
         color = '#39b54b'
         db_connect_result = True
+        image_url = json_data["success_url"] if json_data else "Not Available"
+        cursor = conn.cursor()
+        cursor.execute(''' CREATE TABLE IF NOT EXISTS clo835 (message VARCHAR(255)) ''')
+        cursor.execute("SELECT message FROM clo835")
+        items = [i[0] for i in cursor.fetchall()]
+        
     except Exception as e:
         color = '#ff3f3f'
         err_message = str(e)
+        image_url = json_data["failed_url"] if json_data else "Not Available"
+        cmd = "aws s3 cp " + image_url + f" static/img/image.jpg"
+        items = ""
     
-    return render_template('hello.html', debug="Environment Variables: DB_Host=" + (os.environ.get('DB_Host') or "Not Set") + "; DB_Database=" + (os.environ.get('DB_Database')  or "Not Set") + "; DB_User=" + (os.environ.get('DB_User')  or "Not Set") + "; DB_Password=" + (os.environ.get('DB_Password')  or "Not Set") + "; " + err_message, db_connect_result=db_connect_result, name=socket.gethostname(), color=color, group_name=group_name, image_url=image_url)
+    cmd = "aws s3 cp " + image_url + f" static/img/image.jpg"
+    process = subprocess.run(cmd, shell=True)
+    
+    return render_template('hello.html', debug="Environment Variables: DB_Host=" + (os.environ.get('DB_Host') or "Not Set") + "; DB_Database=" + (os.environ.get('DB_Database')  or "Not Set") + "; DB_User=" + (os.environ.get('DB_User')  or "Not Set") + "; DB_Password=" + (os.environ.get('DB_Password')  or "Not Set") + "; " + err_message, db_connect_result=db_connect_result, name=socket.gethostname(), color=color, group_name=group_name, image_url=image_url, items=items)
+
+@app.route("/", methods = ['POST'])
+def insert():
+    err_message = ""
+    if request.method == 'POST':
+        message = request.form['message']
+        conn = mysql.connector.connect(host=DB_Host, database=DB_Database, user=DB_User, password=DB_Password)
+        cursor = conn.cursor()
+        cursor.execute(''' CREATE TABLE IF NOT EXISTS clo835 (message VARCHAR(255)) ''')
+        cursor.execute(''' INSERT INTO clo835 (message) VALUES (%s)''', [(message)])
+        conn.commit()
+            
+    return redirect('/')
 
 @app.route("/debug")
 def debug():

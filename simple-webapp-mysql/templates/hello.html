@@ -1,31 +1,44 @@
-<!doctype html>
+<!DOCTYPE html>
 <title>Hello from {{ group_name }}</title>
 <body style="background: {{ color }};"></body>
-<div style="color: #e4e4e4;
-    text-align:  center;
-    height: 90px;
-    vertical-align:  middle;">
+<div style="color: #e4e4e4; text-align: center; height: 90px; vertical-align: middle">
+    <h2>Hello from {{ group_name }}</h2>
+    <img src="{{ url_for('static', filename='img/image.jpg') }}" width="350" height="250"/>
+    {% if db_connect_result %}
+    <h3>Successfully connected to the MySQL database.</h3>
+    {% else %}
+    <h3>Failed connecting to the MySQL database.</h3>
+    {% endif %}
+    <h4>S3 image location is : "{{ image_url }}"</h4>
 
-  <img src="{{ url_for('static', filename='img/image.jpg') }}">
-  {% if db_connect_result %}
-  <h3> Successfully connected to the MySQL database.</h3>
-  {% else %}
-  <h3> Failed connecting to the MySQL database. </h3>
-  {% endif %}
-  <h2> S3 image location is : "{{ image_url }}" </h2>
-
-  {% if debug %}
-    <h2> {{ debug }} </h2>
-  {% endif %}
-
-  {% if name %}
-    <p> From {{ name }}!</p>
-  {% endif %}
-
-  {% if contents %}
-  <textarea rows="10" cols="50">
+    {% if debug %}
+    <h4>{{ debug }}</h4>
+    {% endif %} {% if name %}
+    <p>From {{ name }}!</p>
+    {% endif %} {% if contents %}
+    <textarea rows="10" cols="50">
     {{ contents }}
   </textarea>
-  {% endif %}
+    {% endif %}
 
+    <hr>
+    {% if db_connect_result %}
+    <form action="" method="POST" class="form">
+        <h2>Enter your messages in database</h2>
+        <div>
+          <input
+            type="text"
+            id="message"
+            name="message"
+            placeholder="Leave a message!"
+            width="300"
+            required
+          />
+        </div>
+        <br>
+        <input type="submit" name="submit" value="Submit" />
+      </form>
+      <br>
+      <div>{{ items }}</div>
+      {% endif %}
 </div>
